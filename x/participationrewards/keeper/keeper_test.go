@@ -1,14 +1,12 @@
 package keeper_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
-	testsuite "github.com/stretchr/testify/suite"
-
 	"cosmossdk.io/math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	icatypes "github.com/cosmos/ibc-go/v5/modules/apps/27-interchain-accounts/types"
 	clienttypes "github.com/cosmos/ibc-go/v5/modules/core/02-client/types"
@@ -16,8 +14,10 @@ import (
 	host "github.com/cosmos/ibc-go/v5/modules/core/24-host"
 	tmclienttypes "github.com/cosmos/ibc-go/v5/modules/light-clients/07-tendermint/types"
 	ibctesting "github.com/cosmos/ibc-go/v5/testing"
+	testsuite "github.com/stretchr/testify/suite"
 
 	"github.com/ingenuity-build/quicksilver/app"
+	umeetypes "github.com/ingenuity-build/quicksilver/umee-types/leverage/types"
 	"github.com/ingenuity-build/quicksilver/utils/addressutils"
 	cmtypes "github.com/ingenuity-build/quicksilver/x/claimsmanager/types"
 	epochtypes "github.com/ingenuity-build/quicksilver/x/epochs/types"
@@ -26,7 +26,12 @@ import (
 	"github.com/ingenuity-build/quicksilver/x/participationrewards/types"
 )
 
-var testAddress = addressutils.GenerateAddressForTestWithPrefix("cosmos")
+var (
+	testAddress        = addressutils.GenerateAddressForTestWithPrefix("cosmos")
+	umeeTestConnection = "connection-77003"
+	umeeTestChain      = "umee-types-1"
+	umeeBaseDenom      = "uumee"
+)
 
 func init() {
 	ibctesting.DefaultTestingAppInit = app.SetupTestingApp
@@ -95,7 +100,7 @@ func (suite *KeeperTestSuite) coreTest() {
 
 	akpd = quicksilver.ParticipationRewardsKeeper.AllKeyedProtocolDatas(suite.chainA.GetContext())
 	// added 6 in setupTestProtocolData
-	suite.Require().Equal(7, len(akpd))
+	suite.Require().Equal(14, len(akpd))
 
 	// advance the chains
 	suite.coordinator.CommitNBlocks(suite.chainA, 1)
@@ -104,6 +109,11 @@ func (suite *KeeperTestSuite) coreTest() {
 	// callback test
 	suite.executeSetEpochBlockCallback()
 	suite.executeOsmosisPoolUpdateCallback()
+	suite.executeUmeeReservesUpdateCallback()
+	suite.executeUmeeTotalBorrowsUpdateCallback()
+	suite.executeUmeeInterestScalarUpdateCallback()
+	suite.executeUmeeLeverageModuleBalanceUpdateCallback()
+	suite.executeUmeeUTokenSupplyUpdateCallback()
 
 	suite.setupTestDeposits()
 	suite.setupTestIntents()
@@ -142,6 +152,9 @@ func (suite *KeeperTestSuite) coreTest() {
 func (suite *KeeperTestSuite) setupTestZones() {
 	quicksilver := suite.GetQuicksilverApp(suite.chainA)
 
+	withdrawalAddress1 := addressutils.GenerateAddressForTestWithPrefix("cosmos")
+	withdrawalAddress2 := addressutils.GenerateAddressForTestWithPrefix("osmo")
+
 	// test zone
 	testzone := icstypes.Zone{
 		ConnectionId:     suite.path.EndpointA.ConnectionID,
@@ -154,6 +167,11 @@ func (suite *KeeperTestSuite) setupTestZones() {
 		DepositsEnabled:  true,
 		UnbondingEnabled: false,
 		Is_118:           true,
+		WithdrawalAddress: &icstypes.ICAAccount{
+			Address:           withdrawalAddress1,
+			PortName:          suite.chainB.ChainID + ".withrawal",
+			WithdrawalAddress: withdrawalAddress1,
+		},
 	}
 	selftestzone := icstypes.Zone{
 		ConnectionId:     suite.path.EndpointB.ConnectionID,
@@ -166,6 +184,11 @@ func (suite *KeeperTestSuite) setupTestZones() {
 		DepositsEnabled:  true,
 		UnbondingEnabled: false,
 		Is_118:           true,
+		WithdrawalAddress: &icstypes.ICAAccount{
+			Address:           withdrawalAddress2,
+			PortName:          suite.chainA.ChainID + ".withrawal",
+			WithdrawalAddress: withdrawalAddress2,
+		},
 	}
 
 	quicksilver.InterchainstakingKeeper.SetZone(suite.chainA.GetContext(), &selftestzone)
@@ -186,9 +209,12 @@ func (suite *KeeperTestSuite) setupTestZones() {
 
 	// self zone
 	performanceAddressOsmo := addressutils.GenerateAddressForTestWithPrefix("osmo")
-	performanceAccountOsmo, err := icstypes.NewICAAccount(performanceAddressOsmo, "self")
+	performanceAccountOsmo, err := icstypes.NewICAAccount(performanceAddressOsmo, "testchain1.performance")
 	suite.Require().NoError(err)
-	performanceAccountOsmo.WithdrawalAddress = addressutils.GenerateAddressForTestWithPrefix("osmo")
+	withdrawalAddressOsmo := addressutils.GenerateAddressForTestWithPrefix("osmo")
+	withdrawalAccountOsmo, err := icstypes.NewICAAccount(withdrawalAddressOsmo, "testchain1.withdrawal")
+	suite.Require().NoError(err)
+	performanceAccountOsmo.WithdrawalAddress = withdrawalAddressOsmo
 
 	zoneSelf := icstypes.Zone{
 		ConnectionId:       "connection-77004",
@@ -203,6 +229,7 @@ func (suite *KeeperTestSuite) setupTestZones() {
 		Is_118:             true,
 		Decimals:           6,
 		PerformanceAddress: performanceAccountOsmo,
+		WithdrawalAddress:  withdrawalAccountOsmo,
 		Validators: []*icstypes.Validator{
 			{
 				ValoperAddress:  "osmovaloper1clpqr4nrk4khgkxj78fcwwh6dl3uw4ep88n0y4",
@@ -235,6 +262,11 @@ func (suite *KeeperTestSuite) setupTestZones() {
 	suite.Require().NoError(err)
 	performanceAccountCosmos.WithdrawalAddress = addressutils.GenerateAddressForTestWithPrefix("cosmos")
 
+	withdrawalAddressCosmos := addressutils.GenerateAddressForTestWithPrefix("cosmos")
+	withdrawalAccountCosmos, err := icstypes.NewICAAccount(withdrawalAddressCosmos, "cosmoshub-4.withdrawal")
+	suite.Require().NoError(err)
+	performanceAccountOsmo.WithdrawalAddress = withdrawalAddressCosmos
+
 	zoneCosmos := icstypes.Zone{
 		ConnectionId:       "connection-77001",
 		ChainId:            "cosmoshub-4",
@@ -245,6 +277,7 @@ func (suite *KeeperTestSuite) setupTestZones() {
 		LiquidityModule:    true,
 		PerformanceAddress: performanceAccountCosmos,
 		Is_118:             true,
+		WithdrawalAddress:  withdrawalAccountCosmos,
 	}
 	quicksilver.InterchainstakingKeeper.SetZone(suite.chainA.GetContext(), &zoneCosmos)
 	cosmosVals := []icstypes.Validator{
@@ -274,6 +307,8 @@ func (suite *KeeperTestSuite) setupTestZones() {
 		quicksilver.InterchainstakingKeeper.SetValidator(suite.chainA.GetContext(), zoneCosmos.ChainId, cosmosVal)
 	}
 
+	withdrawalAddress := addressutils.GenerateAddressForTestWithPrefix("osmo")
+
 	// osmosis zone
 	zoneOsmosis := icstypes.Zone{
 		ConnectionId:    "connection-77002",
@@ -285,8 +320,13 @@ func (suite *KeeperTestSuite) setupTestZones() {
 		LiquidityModule: true,
 		PerformanceAddress: &icstypes.ICAAccount{
 			Address:           addressutils.GenerateAddressForTestWithPrefix("osmo"),
-			PortName:          "cosmoshub-4.performance",
-			WithdrawalAddress: addressutils.GenerateAddressForTestWithPrefix("osmo"),
+			PortName:          "osmosis-1.performance",
+			WithdrawalAddress: withdrawalAddress,
+		},
+		WithdrawalAddress: &icstypes.ICAAccount{
+			Address:           withdrawalAddress,
+			PortName:          "osmosis-1.withrawal",
+			WithdrawalAddress: withdrawalAddress,
 		},
 		Is_118: true,
 	}
@@ -352,6 +392,46 @@ func (suite *KeeperTestSuite) setupTestProtocolData() {
 	suite.addProtocolData(
 		types.ProtocolDataTypeConnection,
 		[]byte(fmt.Sprintf("{\"connectionid\": %q,\"chainid\": %q,\"lastepoch\": %d}", suite.path.EndpointB.ConnectionID, suite.chainB.ChainID, 0)),
+	)
+	// umee-types params
+	suite.addProtocolData(
+		types.ProtocolDataTypeUmeeParams,
+		[]byte(fmt.Sprintf("{\"ChainID\": %q}", umeeTestChain)),
+	)
+	// umee-types test chain
+	suite.addProtocolData(
+		types.ProtocolDataTypeConnection,
+		[]byte(fmt.Sprintf("{\"connectionid\": %q,\"chainid\": %q,\"lastepoch\": %d}", umeeTestConnection, umeeTestChain, 0)),
+	)
+	// umee-types test reserves
+	upd, _ := json.Marshal(types.UmeeReservesProtocolData{UmeeProtocolData: types.UmeeProtocolData{Denom: umeeBaseDenom}})
+	suite.addProtocolData(
+		types.ProtocolDataTypeUmeeReserves,
+		upd,
+	)
+	// umee-types test leverage module balance
+	upd, _ = json.Marshal(types.UmeeLeverageModuleBalanceProtocolData{UmeeProtocolData: types.UmeeProtocolData{Denom: umeeBaseDenom}})
+	suite.addProtocolData(
+		types.ProtocolDataTypeUmeeLeverageModuleBalance,
+		upd,
+	)
+	// umee-types test borrows
+	upd, _ = json.Marshal(types.UmeeTotalBorrowsProtocolData{UmeeProtocolData: types.UmeeProtocolData{Denom: umeeBaseDenom}})
+	suite.addProtocolData(
+		types.ProtocolDataTypeUmeeTotalBorrows,
+		upd,
+	)
+	// umee-types test interest scalar
+	upd, _ = json.Marshal(types.UmeeInterestScalarProtocolData{UmeeProtocolData: types.UmeeProtocolData{Denom: umeeBaseDenom}})
+	suite.addProtocolData(
+		types.ProtocolDataTypeUmeeInterestScalar,
+		upd,
+	)
+	// umee-types test utoken supply
+	upd, _ = json.Marshal(types.UmeeUTokenSupplyProtocolData{UmeeProtocolData: types.UmeeProtocolData{Denom: umeetypes.UTokenPrefix + umeeBaseDenom}})
+	suite.addProtocolData(
+		types.ProtocolDataTypeUmeeUTokenSupply,
+		upd,
 	)
 	// osmosis params
 	suite.addProtocolData(

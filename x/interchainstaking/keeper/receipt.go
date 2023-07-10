@@ -17,6 +17,7 @@ import (
 
 	"github.com/ingenuity-build/quicksilver/utils/addressutils"
 	"github.com/ingenuity-build/quicksilver/x/interchainstaking/types"
+	minttypes "github.com/ingenuity-build/quicksilver/x/mint/types"
 )
 
 const (
@@ -89,13 +90,14 @@ func (k *Keeper) HandleReceiptTransaction(ctx sdk.Context, txn *tx.Tx, hash stri
 
 	if len(memo) > 0 {
 		// process memo
-		memoIntent, memoFields, err = zone.DecodeMemo(assets, memo)
+		memoFields, err = zone.DecodeMemo(memo)
 		if err != nil {
 			// What should we do on error here? just log?
 			k.Logger(ctx).Error("error decoding memo", "error", err.Error(), "memo", memo)
 		}
 		memoRTS = memoFields.RTS()
 		mappedAddress, _ = memoFields.AccountMap()
+		memoIntent, _ = memoFields.Intent(assets, &zone)
 	}
 
 	// update state
@@ -217,6 +219,13 @@ func (k *Keeper) MintAndSendQAsset(ctx sdk.Context, sender sdk.AccAddress, sende
 	}
 
 	k.Logger(ctx).Info("Transferred qAssets to sender", "assets", qAssets, "sender", sender)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			minttypes.EventTypeMint,
+			sdk.NewAttribute(sdk.AttributeKeyAmount, qAssets.String()),
+		),
+	)
 	return nil
 }
 
