@@ -314,14 +314,25 @@ func (k *Keeper) HandleMsgTransfer(ctx sdk.Context, msg sdk.Msg) error {
 	receivedCoin := sMsg.Token
 
 	zone, found := k.GetZoneForWithdrawalAccount(ctx, sMsg.Sender)
+	if !found {
+		return fmt.Errorf("zone not found for withdrawal account %s", sMsg.Sender)
+	}
 
-	channel, cfound := k.IBCKeeper.ChannelKeeper.GetChannel(ctx, sMsg.SourcePort, sMsg.SourceChannel)
-	if !cfound {
+	var channel *channeltypes.IdentifiedChannel
+	k.IBCKeeper.ChannelKeeper.IterateChannels(ctx, func(ic channeltypes.IdentifiedChannel) bool {
+		if ic.Counterparty.ChannelId == sMsg.SourceChannel && ic.Counterparty.PortId == sMsg.SourcePort && len(ic.ConnectionHops) == 1 && ic.ConnectionHops[0] == zone.ConnectionId {
+			channel = &ic
+			return true
+		}
+		return false
+	})
+
+	if channel == nil {
 		k.Logger(ctx).Error("channel not found for the packet", "port", sMsg.SourcePort, "channel", sMsg.SourceChannel)
 		return errors.New("channel not found for the packet")
 	}
 
-	denomTrace := utils.DeriveIbcDenomTrace(channel.Counterparty.PortId, channel.Counterparty.ChannelId, receivedCoin.Denom)
+	denomTrace := utils.DeriveIbcDenomTrace(channel.PortId, channel.ChannelId, receivedCoin.Denom)
 	receivedCoin.Denom = denomTrace.IBCDenom()
 
 	if found && denomTrace.BaseDenom != zone.BaseDenom {
@@ -374,7 +385,7 @@ func (k *Keeper) HandleCompleteSend(ctx sdk.Context, msg sdk.Msg, memo string) e
 	case zone.IsDelegateAddress(sMsg.ToAddress) && zone.DepositAddress.Address == sMsg.FromAddress:
 		return k.handleSendToDelegate(ctx, zone, sMsg, memo)
 	default:
-		err = errors.New("unexpected completed send")
+		err = fmt.Errorf("unexpected completed send (2) from %s to %s (amount: %s)", sMsg.FromAddress, sMsg.ToAddress, sMsg.Amount)
 		k.Logger(ctx).Error(err.Error())
 		return err
 	}
@@ -408,7 +419,12 @@ func (k *Keeper) handleSendToDelegate(ctx sdk.Context, zone *types.Zone, msg *ba
 // if no other withdrawal records exist for this triple (i.e. no further withdrawal from this delegator account for this user (i.e. different validator))
 // then burn the withdrawal_record's burn_amount.
 func (k *Keeper) HandleWithdrawForUser(ctx sdk.Context, zone *types.Zone, msg *banktypes.MsgSend, memo string) error {
-	withdrawalRecord, found := k.GetWithdrawalRecord(ctx, zone.ChainId, memo, types.WithdrawStatusSend)
+	txHash, err := types.ParseTxMsgMemo(memo, types.MsgTypeUnbondSend)
+	if err != nil {
+		return err
+	}
+
+	withdrawalRecord, found := k.GetWithdrawalRecord(ctx, zone.ChainId, txHash, types.WithdrawStatusSend)
 	if !found {
 		return errors.New("no matching withdrawal record found")
 	}
@@ -422,7 +438,6 @@ func (k *Keeper) HandleWithdrawForUser(ctx sdk.Context, zone *types.Zone, msg *b
 			// if we can't burn the coins, fail.
 			return err
 		}
-		k.SetWithdrawalRecord(ctx, withdrawalRecord)
 		k.Logger(ctx).Info("burned coins post-withdrawal", "coins", withdrawalRecord.BurnAmount)
 	} else {
 
@@ -441,7 +456,6 @@ func (k *Keeper) HandleWithdrawForUser(ctx sdk.Context, zone *types.Zone, msg *b
 						// if we can't burn the coins, fail.
 						return err
 					}
-					k.SetWithdrawalRecord(ctx, withdrawalRecord)
 					k.Logger(ctx).Info("burned coins post-withdrawal", "coins", withdrawalRecord.BurnAmount)
 				}
 				break
@@ -758,9 +772,9 @@ func (k *Keeper) HandleFailedBankSend(ctx sdk.Context, msg sdk.Msg, memo string)
 		// MsgSend from deposit account to delegate account for deposit.
 		k.Logger(ctx).Error("MsgSend from deposit account to delegate account failed")
 	default:
-		err = errors.New("unexpected completed send")
+		err = fmt.Errorf("unexpected completed send (1) from %s to %s (amount: %s)", sMsg.FromAddress, sMsg.ToAddress, sMsg.Amount)
 		k.Logger(ctx).Error(err.Error())
-		return err
+		return nil
 	}
 
 	return nil
