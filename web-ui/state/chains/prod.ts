@@ -101,7 +101,7 @@ export const networks = [
       logo: '/img/networks/osmosis.svg',
       qlogo: '/img/networks/qosmo.png',
       name: 'Osmosis',
-      chainName: 'osmosistestnet',
+      chainName: 'osmosis',
       chainId: 'osmo-test-5',
     },
     {

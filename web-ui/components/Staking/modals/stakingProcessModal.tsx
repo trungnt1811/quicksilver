@@ -26,12 +26,11 @@ import chains from 'chain-registry';
 import { cosmos } from 'quicksilverjs';
 import React, { useEffect, useState } from 'react';
 
+import { MultiModal } from './validatorSelectionModal';
 
 import { useTx } from '@/hooks';
 import { useZoneQuery } from '@/hooks/useQueries';
 import { shiftDigits } from '@/utils';
-
-import { MultiModal } from './validatorSelectionModal';
 
 const ChakraModalContent = styled(ModalContent)`
   position: relative;
@@ -86,6 +85,20 @@ export const StakingProcessModal: React.FC<StakingModalProps> = ({ isOpen, onClo
 
   const [isSigning, setIsSigning] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
+
+  let newChainName: string | undefined;
+  if (selectedOption?.chainId === 'provider') {
+    newChainName = 'rsprovidertestnet';
+  } else if (selectedOption?.chainId === 'elgafar-1') {
+    newChainName = 'stargazetestnet';
+  } else if (selectedOption?.chainId === 'osmo-test-5') {
+    newChainName = 'osmosistestnet';
+  } else if (selectedOption?.chainId === 'regen-redwood-1') {
+    newChainName = 'regen';
+  } else {
+    // Default case
+    newChainName = selectedOption?.chainName;
+  }
 
   const labels = ['Choose validators', `Set weights`, `Sign & Submit`, `Receive q${selectedOption?.value}`];
   const [isModalOpen, setModalOpen] = useState(false);
@@ -251,7 +264,7 @@ export const StakingProcessModal: React.FC<StakingModalProps> = ({ isOpen, onClo
     gas: '500000',
   };
 
-  const { tx } = useTx(selectedOption?.chainName ?? '');
+  const { tx } = useTx(newChainName ?? '');
 
   const handleLiquidStake = async (event: React.MouseEvent) => {
     event.preventDefault();
