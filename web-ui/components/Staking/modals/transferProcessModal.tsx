@@ -105,19 +105,6 @@ export const TransferProcessModal: React.FC<StakingModalProps> = ({
   const [isSigning, setIsSigning] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
-  let newChainName: string | undefined;
-  if (selectedOption?.chainId === 'provider') {
-    newChainName = 'rsprovidertestnet';
-  } else if (selectedOption?.chainId === 'elgafar-1') {
-    newChainName = 'stargazetestnet';
-  } else if (selectedOption?.chainId === 'osmo-test-5') {
-    newChainName = 'osmosistestnet';
-  } else if (selectedOption?.chainId === 'regen-redwood-1') {
-    newChainName = 'regen';
-  } else {
-    newChainName = selectedOption?.chainName;
-  }
-
   const { data: zone } = useZoneQuery(selectedOption?.chainId ?? '');
   const labels = ['Tokenize Shares', `Transfer`, `Receive q${selectedOption?.value}`];
   const [transactionStatus, setTransactionStatus] = useState('Pending');
@@ -141,8 +128,8 @@ export const TransferProcessModal: React.FC<StakingModalProps> = ({
     tokenized_share_owner: address,
   });
 
-  const mainTokens = assets.find(({ chain_name }) => chain_name === newChainName);
-  const fees = chains.chains.find(({ chain_name }) => chain_name === newChainName)?.fees?.fee_tokens;
+  const mainTokens = assets.find(({ chain_name }) => chain_name === selectedOption?.chainName);
+  const fees = chains.chains.find(({ chain_name }) => chain_name === selectedOption?.chainName)?.fees?.fee_tokens;
   const mainDenom = mainTokens?.assets[0].base ?? '';
   const fixedMinGasPrice = fees?.find(({ denom }) => denom === mainDenom)?.high_gas_price ?? '';
   const feeAmount = Number(fixedMinGasPrice) * 750000;
@@ -169,7 +156,7 @@ export const TransferProcessModal: React.FC<StakingModalProps> = ({
     gas: '100000',
   };
 
-  const { tx, responseEvents } = useTx(newChainName ?? '');
+  const { tx, responseEvents } = useTx(selectedOption?.chainName ?? '');
   const [combinedDenom, setCombinedDenom] = useState<string>();
 
   // prettier-ignore

@@ -340,19 +340,7 @@ export const useIntentQuery = (chainName: string, address: string) => {
   const env = process.env.NEXT_PUBLIC_CHAIN_ENV;
   const baseApiUrl = env === 'testnet' ? 'https://lcd.test.quicksilver.zone' : 'https://lcd.quicksilver.zone';
   let chainId = chain.chain_id;
-  if (chainName === 'osmosistestnet') {
-    chainId = 'osmo-test-5';
-  } else if (chainName === 'cosmoshubtestnet') {
-    chainId = 'provider';
-  } else if (chainName === 'stargazetestnet') {
-    chainId = 'elgafar-1';
-  } else if (chainName === 'osmo-test-5') {
-    chainId = 'osmosistestnet';
- 
-  } else {
 
-    chainId = chain.chain_id;
-  }
   const intentQuery = useQuery(
     ['intent', chainName],
     async () => {
@@ -434,22 +422,12 @@ export const useLiquidEpochQuery = (address: string): UseLiquidEpochQueryReturnT
 };
 
 export const useUnbondingQuery = (chainName: string, address: string) => {
-  const env = process.env.NEXT_PUBLIC_CHAIN_ENV;
-  const baseApiUrl = env === 'testnet' ? 'https://lcd.test.quicksilver.zone' : 'https://lcd.quicksilver.zone';
+
+  const baseApiUrl =  process.env.NEXT_PUBLIC_QUICKSILVER_API;
   
   const { chain } = useChain(chainName);
-  let chainId = chain.chain_id;
-  if (chainName === 'osmosistestnet') {
-    chainId = 'osmo-test-5';
-  } else if (chainName === 'stargazetestnet') {
-    chainId = 'elgafar-1';
-  } else if (chainName === 'osmo-test-5') {
-    chainId = 'osmosistestnet';
+  const chainId = chain.chain_id;
  
-  } else {
-
-    chainId = chain.chain_id;
-  }
   const unbondingQuery = useQuery(
     ['unbond', chainName, address],
     async () => {

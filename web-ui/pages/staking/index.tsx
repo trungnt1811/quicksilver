@@ -27,21 +27,7 @@ const networks = process.env.NEXT_PUBLIC_CHAIN_ENV === 'mainnet' ? prodNetworks 
 export default function Staking() {
   const [selectedNetwork, setSelectedNetwork] = useState(networks[0]);
 
-  let newChainId;
-  if (selectedNetwork.chainId === 'provider') {
-    newChainId = 'cosmoshub-4';
-  } else if (selectedNetwork.chainId === 'elgafar-1') {
-    newChainId = 'stargaze-1';
-  } else if (selectedNetwork.chainId === 'osmo-test-5') {
-    newChainId = 'osmosis-1';
-  } else if (selectedNetwork.chainId === 'regen-redwood-1') {
-    newChainId = 'regen-1';
-  } else {
-    // Default case
-    newChainId = selectedNetwork.chainId;
-  }
-
-  const { APY, isLoading, isError } = useAPYQuery(newChainId);
+  const { APY, isLoading, isError } = useAPYQuery(selectedNetwork.chainId);
   const [balance, setBalance] = useState('');
   const [qBalance, setQBalance] = useState('');
 

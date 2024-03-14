@@ -87,22 +87,6 @@ export const StakingProcessModal: React.FC<StakingModalProps> = ({ isOpen, onClo
   const [isSigning, setIsSigning] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
-  let newChainName: string | undefined;
-  if (selectedOption?.chainId === 'provider') {
-    newChainName = 'rsprovidertestnet';
-  } else if (selectedOption?.chainId === 'elgafar-1') {
-    newChainName = 'stargazetestnet';
-  } else if (selectedOption?.chainId === 'osmo-test-5') {
-    newChainName = 'osmosistestnet';
-  } else if (selectedOption?.chainId === 'regen-redwood-1') {
-    newChainName = 'regen';
-  } else if (selectedOption?.chainId === 'sommelier-3') {
-    newChainName = 'sommelier';
-  } else {
-    // Default case
-    newChainName = selectedOption?.chainName;
-  }
-
   const labels = ['Choose validators', `Set weights`, `Sign & Submit`, `Receive q${selectedOption?.value}`];
   const [isModalOpen, setModalOpen] = useState(false);
 
@@ -244,8 +228,8 @@ export const StakingProcessModal: React.FC<StakingModalProps> = ({ isOpen, onClo
     amount: coins(smallestUnitAmount.toFixed(0), zone?.base_denom ?? ''),
   });
 
-  const mainTokens = assets.find(({ chain_name }) => chain_name === newChainName);
-  const fees = chains.chains.find(({ chain_name }) => chain_name === newChainName)?.fees?.fee_tokens;
+  const mainTokens = assets.find(({ chain_name }) => chain_name === selectedOption?.chainName);
+  const fees = chains.chains.find(({ chain_name }) => chain_name === selectedOption?.chainName)?.fees?.fee_tokens;
   const mainDenom = mainTokens?.assets[0].base ?? '';
   let feeAmount;
   if (selectedOption?.chainName === 'sommelier') {
@@ -267,7 +251,7 @@ export const StakingProcessModal: React.FC<StakingModalProps> = ({ isOpen, onClo
     gas: '500000',
   };
 
-  const { tx } = useTx(newChainName ?? '');
+  const { tx } = useTx(selectedOption?.chainName ?? '');
 
   const handleLiquidStake = async (event: React.MouseEvent) => {
     event.preventDefault();

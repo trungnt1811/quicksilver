@@ -120,22 +120,6 @@ export const networks = [
       chainName: 'regen',
       chainId: 'regen-redwood-1',
     },
-    {
-      value: 'SOMM',
-      logo: '/img/networks/somm.svg',
-      qlogo: '/img/networks/qsomm.png',
-      name: 'Sommelier',
-      chainName: 'Sommelier',
-      chainId: 'sommelier-3',
-    },
-    {
-        value: 'JUNO',
-        logo: '/img/networks/juno.svg',
-        qlogo: '/img/networks/qjuno.png',
-        name: 'Juno',
-        chainName: 'juno',
-        chainId: 'juno-1',
-        },
   ];
 
 

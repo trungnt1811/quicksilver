@@ -24,7 +24,7 @@ type Network = {
   chainId: string;
 };
 
-export const NetworkSelect: React.FC<CustomMenuProps> = ({ buttonTextColor = 'white', selectedOption, setSelectedNetwork }) => {
+export const NetworkSelect: React.FC<CustomMenuProps> = ({ selectedOption, setSelectedNetwork }) => {
   const handleOptionClick = (network: (typeof networks)[0]) => {
     setSelectedNetwork(network);
   };
@@ -46,6 +46,7 @@ export const NetworkSelect: React.FC<CustomMenuProps> = ({ buttonTextColor = 'wh
   const fetchLiveZones = async () => {
     try {
       const response = await axios.get(`${process.env.NEXT_PUBLIC_QUICKSILVER_API}/quicksilver/interchainstaking/v1/zones`);
+
       const liveZones = response.data.zones.map((zone: { chain_id: any }) => zone.chain_id);
       return liveZones;
     } catch (error) {

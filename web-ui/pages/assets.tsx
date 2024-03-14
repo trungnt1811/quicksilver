@@ -32,8 +32,7 @@ interface RedemptionRates {
   osmo: RedemptionRate;
   stars: RedemptionRate;
   regen: RedemptionRate;
-  somm: RedemptionRate;
-  juno: RedemptionRate;
+
   [key: string]: RedemptionRate;
 }
 
@@ -56,9 +55,6 @@ function Home() {
   const OSMOSIS_CHAIN_ID = process.env.NEXT_PUBLIC_OSMOSIS_CHAIN_ID;
   const STARGAZE_CHAIN_ID = process.env.NEXT_PUBLIC_STARGAZE_CHAIN_ID;
   const REGEN_CHAIN_ID = process.env.NEXT_PUBLIC_REGEN_CHAIN_ID;
-  const SOMMELIER_CHAIN_ID = process.env.NEXT_PUBLIC_SOMMELIER_CHAIN_ID;
-  const JUNO_CHAIN_ID = process.env.NEXT_PUBLIC_JUNO_CHAIN_ID;
-  const DYDX_CHAIN_ID = process.env.NEXT_PUBLIC_DYDX_CHAIN_ID;
 
   // Retrieve list of zones that are enabled for liquid staking || Will use the above instead
   const { liveNetworks } = useLiveZones();
@@ -70,27 +66,19 @@ function Home() {
   const { balance: qOsmo, isLoading: isLoadingQOBalance } = useQBalanceQuery('quicksilver', address ?? '', 'osmo');
   const { balance: qStars, isLoading: isLoadingQSBalance } = useQBalanceQuery('quicksilver', address ?? '', 'stars');
   const { balance: qRegen, isLoading: isLoadingQRBalance } = useQBalanceQuery('quicksilver', address ?? '', 'regen');
-  const { balance: qSomm, isLoading: isLoadingQSOBalance } = useQBalanceQuery('quicksilver', address ?? '', 'somm');
-  const { balance: qJuno, isLoading: isLoadingQJBalance } = useQBalanceQuery('quicksilver', address ?? '', 'juno');
-  const { balance: qDydx, isLoading: isLoadingQDBalance } = useQBalanceQuery('quicksilver', address ?? '', 'dydx');
 
   // Retrieve zone data for each token
   const { data: CosmosZone, isLoading: isLoadingCosmosZone } = useZoneQuery(COSMOSHUB_CHAIN_ID ?? '');
   const { data: OsmoZone, isLoading: isLoadingOsmoZone } = useZoneQuery(OSMOSIS_CHAIN_ID ?? '');
   const { data: StarZone, isLoading: isLoadingStarZone } = useZoneQuery(STARGAZE_CHAIN_ID ?? '');
   const { data: RegenZone, isLoading: isLoadingRegenZone } = useZoneQuery(REGEN_CHAIN_ID ?? '');
-  const { data: SommZone, isLoading: isLoadingSommZone } = useZoneQuery(SOMMELIER_CHAIN_ID ?? '');
-  const { data: JunoZone, isLoading: isLoadingJunoZone } = useZoneQuery(JUNO_CHAIN_ID ?? '');
-  const { data: DydxZone, isLoading: isLoadingDydxZone } = useZoneQuery(DYDX_CHAIN_ID ?? '');
+
   // Retrieve APY data for each token
-  const { APY: cosmosAPY, isLoading: isLoadingCosmosApy } = useAPYQuery('cosmoshub-4');
-  const { APY: osmoAPY, isLoading: isLoadingOsmoApy } = useAPYQuery('osmosis-1');
-  const { APY: starsAPY, isLoading: isLoadingStarsApy } = useAPYQuery('stargaze-1');
-  const { APY: regenAPY, isLoading: isLoadingRegenApy } = useAPYQuery('regen-1');
-  const { APY: sommAPY, isLoading: isLoadingSommApy } = useAPYQuery('sommelier-3');
+  const { APY: cosmosAPY, isLoading: isLoadingCosmosApy } = useAPYQuery('provider');
+  const { APY: osmoAPY, isLoading: isLoadingOsmoApy } = useAPYQuery('osmo-test-5');
+  const { APY: starsAPY, isLoading: isLoadingStarsApy } = useAPYQuery('elgafar-1');
+  const { APY: regenAPY, isLoading: isLoadingRegenApy } = useAPYQuery('regen-redwood-11');
   const { APY: quickAPY } = useAPYQuery('quicksilver-2');
-  const { APY: junoAPY, isLoading: isLoadingJunoApy } = useAPYQuery('juno-1');
-  const { APY: dydxAPY, isLoading: isLoadingDydxApy } = useAPYQuery('dydx-mainnet-1');
 
   const isLoadingAll =
     isLoadingPrices ||
@@ -98,23 +86,14 @@ function Home() {
     isLoadingQOBalance ||
     isLoadingQSBalance ||
     isLoadingQRBalance ||
-    isLoadingQSOBalance ||
-    isLoadingQJBalance ||
-    isLoadingQDBalance ||
     isLoadingCosmosZone ||
     isLoadingOsmoZone ||
     isLoadingStarZone ||
     isLoadingRegenZone ||
-    isLoadingSommZone ||
-    isLoadingJunoZone ||
-    isLoadingDydxZone ||
     isLoadingCosmosApy ||
     isLoadingOsmoApy ||
     isLoadingStarsApy ||
-    isLoadingRegenApy ||
-    isLoadingSommApy ||
-    isLoadingJunoApy ||
-    isLoadingDydxApy;
+    isLoadingRegenApy;
 
   // useMemo hook to cache APY data
   const qAPYRates: APYRates = useMemo(
@@ -123,10 +102,8 @@ function Home() {
       qOsmo: osmoAPY ?? 0,
       qStars: starsAPY ?? 0,
       qRegen: regenAPY ?? 0,
-      qSomm: sommAPY ?? 0,
-      qJuno: junoAPY ?? 0,
     }),
-    [cosmosAPY, osmoAPY, starsAPY, regenAPY, sommAPY, junoAPY],
+    [cosmosAPY, osmoAPY, starsAPY, regenAPY],
   );
   // useMemo hook to cache qBalance data
   const qBalances: BalanceRates = useMemo(
@@ -135,10 +112,8 @@ function Home() {
       qOsmo: shiftDigits(qOsmo?.balance?.amount ?? '000000', -6),
       qStars: shiftDigits(qStars?.balance?.amount ?? '000000', -6),
       qRegen: shiftDigits(qRegen?.balance?.amount ?? '000000', -6),
-      qSomm: shiftDigits(qSomm?.balance?.amount ?? '000000', -6),
-      qJuno: shiftDigits(qJuno?.balance?.amount ?? '000000', -6),
     }),
-    [qAtom, qOsmo, qStars, qRegen, qSomm, qJuno],
+    [qAtom, qOsmo, qStars, qRegen],
   );
 
   // useMemo hook to cache redemption rate data
@@ -160,16 +135,8 @@ function Home() {
         current: RegenZone?.redemption_rate ? parseFloat(RegenZone.redemption_rate) : 1,
         last: RegenZone?.last_redemption_rate ? parseFloat(RegenZone.last_redemption_rate) : 1,
       },
-      somm: {
-        current: SommZone?.redemption_rate ? parseFloat(SommZone.redemption_rate) : 1,
-        last: SommZone?.last_redemption_rate ? parseFloat(SommZone.last_redemption_rate) : 1,
-      },
-      juno: {
-        current: JunoZone?.redemption_rate ? parseFloat(JunoZone.redemption_rate) : 1,
-        last: JunoZone?.last_redemption_rate ? parseFloat(JunoZone.last_redemption_rate) : 1,
-      },
     }),
-    [CosmosZone, OsmoZone, StarZone, RegenZone, SommZone, JunoZone],
+    [CosmosZone, OsmoZone, StarZone, RegenZone],
   );
 
   // State hooks for portfolio items, total portfolio value, and other metrics

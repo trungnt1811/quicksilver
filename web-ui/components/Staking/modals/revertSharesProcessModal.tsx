@@ -96,23 +96,10 @@ export const RevertSharesProcessModal: React.FC<StakingModalProps> = ({
   const [isSigning, setIsSigning] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
-  let newChainName: string | undefined;
-  if (selectedOption?.chainId === 'provider') {
-    newChainName = 'rsprovidertestnet';
-  } else if (selectedOption?.chainId === 'elgafar-1') {
-    newChainName = 'stargazetestnet';
-  } else if (selectedOption?.chainId === 'osmo-test-5') {
-    newChainName = 'osmosistestnet';
-  } else if (selectedOption?.chainId === 'regen-redwood-1') {
-    newChainName = 'regen';
-  } else {
-    newChainName = selectedOption?.chainName;
-  }
-
   const labels = ['Revert Shares', `Receive Tokens`];
 
-  const mainTokens = assets.find(({ chain_name }) => chain_name === newChainName);
-  const fees = chains.chains.find(({ chain_name }) => chain_name === newChainName)?.fees?.fee_tokens;
+  const mainTokens = assets.find(({ chain_name }) => chain_name === selectedOption?.chainName);
+  const fees = chains.chains.find(({ chain_name }) => chain_name === selectedOption?.chainName)?.fees?.fee_tokens;
   const mainDenom = mainTokens?.assets[0].base ?? '';
   const fixedMinGasPrice = fees?.find(({ denom }) => denom === mainDenom)?.high_gas_price ?? '';
   const feeAmount = Number(fixedMinGasPrice) * 750000;
@@ -127,7 +114,7 @@ export const RevertSharesProcessModal: React.FC<StakingModalProps> = ({
     gas: '750000',
   };
 
-  const { tx, responseEvents } = useTx(newChainName ?? '');
+  const { tx, responseEvents } = useTx(selectedOption?.chainName ?? '');
   const [combinedDenom, setCombinedDenom] = useState<string>();
 
   // prettier-ignore

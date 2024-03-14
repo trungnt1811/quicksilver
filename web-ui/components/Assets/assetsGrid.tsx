@@ -58,7 +58,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ assetName, balance, apy, redempti
     if (!nonNative) {
       return '0';
     }
-    const chainIds = ['osmosis-1', 'secret-1', 'umee-1', 'cosmoshub-4', 'stargaze-1', 'sommelier-3', 'regen-1', 'juno-1', 'dydx-mainnet-1'];
+    const chainIds = ['osmo-test-5', 'provider', 'regen-redwood-1', 'elgafar-1'];
     let totalAmount = 0;
 
     chainIds.forEach((chainId) => {
